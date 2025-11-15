@@ -1,0 +1,77 @@
+/* CSS Puro para Estilização e Efeitos */
+body {
+    background-color: #f7f9fc;
+    font-family: 'Arial', sans-serif;
+}
+
+.product-card {
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: white;
+    height: 100%;
+    /* Garante altura uniforme para as cartas */
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-img-container {
+    height: 200px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-img-container img {
+    max-height: 100%;
+    width: auto;
+    object-fit: contain;
+}
+
+.btn-add-to-cart {
+    width: 100%;
+    transition: background-color 0.2s;
+    border-radius: 0 0 10px 10px;
+    margin-top: auto;
+    /* Empurra o botão para baixo */
+}
+
+.cart-item {
+    border-bottom: 1px solid #eee;
+    padding: 15px 0;
+}
+
+.cart-item:last-child {
+    border-bottom: none;
+}
+
+.cart-quantity-control input {
+    width: 40px;
+    text-align: center;
+    border-radius: 0;
+    border: 1px solid #ccc;
+}
+
+.modal-body-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Estilos semânticos para acessibilidade */
+.header-main {
+    background-color: #1a237e;
+    color: white;
+}
+
+.main-content {
+    padding-top: 20px;
+    padding-bottom: 50px;
+}

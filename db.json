@@ -1,0 +1,18 @@
+{
+  "produtos": [
+    {
+      "id": "1",
+      "nome": "Cadeira de Escritório Ergonômica",
+      "preco": 459.90,
+      "imagemUrl": "https://placehold.co/400x300/e0e7ff/000?text=Cadeira+Ergo"
+    },
+    {
+      "id": "2",
+      "nome": "Mesa para Computador em L",
+      "preco": 989.50,
+      "imagemUrl": "https://placehold.co/400x300/ffe0e0/000?text=Mesa+em+L"
+    }
+  ],
+  "carrinho": [
+  ]
+}
