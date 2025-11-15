@@ -154,7 +154,7 @@ function renderProducts(products) {
                     </div>
                     <div class="p-3 d-flex flex-column flex-grow-1">
                         <h3 class="h5 card-title">${product.nome}</h3>
-                        <p class="card-text text-muted flex-grow-1">${product.descricao.substring(0, 70)}...</p>
+                        <p class="card-text text-muted flex-grow-1">${(product.descricao ?? '').substring(0, 70)}...</p>
                         <p class="h5 text-danger">${formatCurrency(product.preco)}</p>
                         <div class="d-flex gap-2 mt-2">
                             <button class="btn btn-outline-info btn-sm view-details-btn flex-grow-1" data-id="${product.id}" aria-label="Ver detalhes de ${product.nome}">
