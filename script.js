@@ -1,9 +1,5 @@
-// -------------------------------------------------------------
-// I. Configurações da API REST (My JSON Server)
-// -------------------------------------------------------------
-
-// URLs Reais da API Mock no My JSON Server
-const API_BASE_URL = 'https://my-json-server.typicode.com/wagnerdalpiccol/trabalho_final_aplicacao_web_backend';
+// URLs Reais da API Mock no MOCKAPI.IO
+const API_BASE_URL = 'https://6918919621a9635948707c45.mockapi.io';
 const PRODUCTS_ENDPOINT = `${API_BASE_URL}/produtos`;
 const CART_ENDPOINT = `${API_BASE_URL}/carrinho`;
 
@@ -14,7 +10,7 @@ let CATALOG_DATA = [];
 const formatCurrency = (value) => `R$ ${value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 
 // -------------------------------------------------------------
-// II. Implementação das Chamadas AJAX (Fetch API)
+// I. Implementação das Chamadas AJAX (Fetch API)
 // -------------------------------------------------------------
 
 // Função de utilidade para fetch com tratamento de erro
@@ -24,7 +20,7 @@ async function handleFetch(url, options = {}) {
         console.error(`Falha na requisição para ${url}. Status: ${response.status}`);
         throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    // Tenta retornar JSON, mas retorna a própria resposta para DELETE (que não tem body)
+    // Tenta retornar JSON, mas retorna a própria resposta para DELETE (que pode não ter body)
     return response.status === 204 || response.status === 200 ? response.text().then(text => text ? JSON.parse(text) : {}) : response.json();
 }
 
@@ -46,44 +42,34 @@ async function fetchCart() {
 
 /**
  * POST /carrinho (com lógica de PUT embutida se o item já existir)
- * @param {Object} data - Dados do produto a ser adicionado.
- * @returns {Promise<Object>} - Item do carrinho criado ou atualizado.
  */
-async function postCartItem(data) {
+async function postCartItemWithQuantity(data, selectedQuantity) {
     const cartItems = await fetchCart();
     // Procura o item no carrinho pelo ID do produto
     const existingItem = cartItems.find(item => item.produtoId === data.produtoId);
 
     if (existingItem) {
-        console.log(`[AJAX] Item já existe, fazendo PUT (aumentando quantidade)...`);
-        const newQuantity = existingItem.quantidade + 1;
-        // Faz um PUT no item existente
-        // Passamos 'true' para isPostLogic para que o PUT não dispare um Toast redundante
-        return putCartItem(existingItem.id, newQuantity, existingItem.nomeProduto, true);
+        console.log(`[AJAX] Item já existe, fazendo PUT (somando quantidade)...`);
+        const newQuantity = existingItem.quantidade + selectedQuantity;
+        return putCartItem(existingItem.id, newQuantity, existingItem.nomeProduto, true); 
     } else {
         console.log(`[AJAX] POST ${CART_ENDPOINT}`);
         const response = await fetch(CART_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...data, quantidade: 1 })
+            body: JSON.stringify({ ...data, quantidade: selectedQuantity }) // Usa a quantidade selecionada
         });
-
         if (!response.ok) throw new Error('Falha ao adicionar item.');
-
+        
         const newItem = await response.json();
-        renderCart(); // Atualiza a interface
-        showToast(`"${newItem.nomeProduto}" adicionado ao carrinho!`);
+        renderCart();
+        showToast(`${selectedQuantity}x "${newItem.nomeProduto}" adicionado ao carrinho!`);
         return newItem;
     }
 }
 
 /**
  * PUT /carrinho/:id - Atualiza a quantidade de um item no carrinho.
- * @param {string} cartItemId - ID do item no carrinho.
- * @param {number} newQuantity - Nova quantidade.
- * @param {string} itemName - Nome do item para o Toast.
- * @param {boolean} isPostLogic - Indica se a chamada vem do POST (para evitar Toast).
- * @returns {Promise<Object>} - Item do carrinho atualizado.
  */
 async function putCartItem(cartItemId, newQuantity, itemName = 'Item', isPostLogic = false) {
     console.log(`[AJAX] PUT ${CART_ENDPOINT}/${cartItemId} com quantidade ${newQuantity}`);
@@ -91,19 +77,18 @@ async function putCartItem(cartItemId, newQuantity, itemName = 'Item', isPostLog
     const quantity = parseInt(newQuantity, 10);
     if (isNaN(quantity) || quantity <= 0) {
         showToast('A quantidade deve ser um número inteiro positivo!', 'bg-danger');
-        // Usamos throw para o .catch() no evento corrigir o valor no input
         throw new Error("Quantidade inválida.");
     }
 
     const response = await fetch(`${CART_ENDPOINT}/${cartItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantidade: quantity }) // Envia apenas a propriedade a ser atualizada
+        body: JSON.stringify({ quantidade: quantity })
     });
 
     if (!response.ok) throw new Error('Falha ao atualizar quantidade.');
 
-    renderCart(); // Atualiza a interface
+    renderCart();
     if (!isPostLogic) {
         showToast(`Quantidade de "${itemName}" atualizada!`, 'bg-info');
     }
@@ -112,21 +97,18 @@ async function putCartItem(cartItemId, newQuantity, itemName = 'Item', isPostLog
 
 /**
  * DELETE /carrinho/:id - Remove um item do carrinho.
- * @param {string} cartItemId - O ID do item do carrinho a ser removido.
- * @param {string} itemName - Nome do item para o Toast.
- * @returns {Promise<void>} - Promessa resolvida após a exclusão.
  */
 async function deleteCartItem(cartItemId, itemName) {
     console.log(`[AJAX] DELETE ${CART_ENDPOINT}/${cartItemId}`);
 
     await handleFetch(`${CART_ENDPOINT}/${cartItemId}`, { method: 'DELETE' });
 
-    renderCart(); // Atualiza a interface
+    renderCart();
     showToast(`Item "${itemName}" removido do carrinho.`, 'bg-danger');
 }
 
 // -------------------------------------------------------------
-// III. Funções de Renderização e Manipulação do DOM
+// II. Funções de Renderização e Manipulação do DOM
 // -------------------------------------------------------------
 
 /**
@@ -142,7 +124,6 @@ function renderProducts(products) {
         return;
     }
     
-    // Armazena no global para referência rápida nos detalhes e carrinho
     CATALOG_DATA = products; 
 
     products.forEach(product => {
@@ -154,13 +135,13 @@ function renderProducts(products) {
                     </div>
                     <div class="p-3 d-flex flex-column flex-grow-1">
                         <h3 class="h5 card-title">${product.nome}</h3>
-                        <p class="card-text text-muted flex-grow-1">${(product.descricao ?? '').substring(0, 70)}...</p>
+                        <p class="card-text text-muted flex-grow-1">${(product.descricao || 'Descrição indisponível').substring(0, 70)}...</p>
                         <p class="h5 text-danger">${formatCurrency(product.preco)}</p>
                         <div class="d-flex gap-2 mt-2">
                             <button class="btn btn-outline-info btn-sm view-details-btn flex-grow-1" data-id="${product.id}" aria-label="Ver detalhes de ${product.nome}">
                                 <i class="fas fa-eye"></i> Detalhes
                             </button>
-                            <button class="btn btn-primary btn-sm add-to-cart-btn flex-grow-1" data-id="${product.id}" data-nome="${product.nome}" aria-label="Adicionar ${product.nome} ao carrinho">
+                            <button class="btn btn-primary btn-sm add-to-cart-btn flex-grow-1" data-id="${product.id}" aria-label="Adicionar ${product.nome} ao carrinho">
                                 <i class="fas fa-cart-plus"></i> Comprar
                             </button>
                         </div>
@@ -173,17 +154,17 @@ function renderProducts(products) {
 }
 
 /**
- * Renderiza o conteúdo do modal de detalhes do produto.
- * @param {Object} product - Objeto de produto.
+ * Renderiza o conteúdo do modal de detalhes do produto OU de compra.
  */
-function renderProductDetails(product) {
+function renderProductDetails(product, showQuantityControl = false) {
     const $body = $('#productDetailBody');
     $body.empty();
     
-    // Garantir que a descrição esteja completa no Modal
+    // Busca o produto completo no catálogo para garantir todas as propriedades
     const fullProduct = CATALOG_DATA.find(p => p.id === product.id) || product; 
-
-    const html = `
+    
+    // Conteúdo HTML do Modal
+    let html = `
         <div class="row">
             <figure class="col-md-5">
                 <img src="${fullProduct.imagemUrl}" class="img-fluid rounded shadow-sm" alt="Imagem de ${fullProduct.nome}">
@@ -191,18 +172,47 @@ function renderProductDetails(product) {
             </figure>
             <div class="col-md-7">
                 <h3 class="h4 text-primary">${fullProduct.nome}</h3>
-                <p class="text-muted small">${fullProduct.descricao}</p>
+                <p class="text-muted small">${fullProduct.descricao || 'Descrição detalhada não disponível.'}</p>
                 <p class="h3 text-danger mb-4">${formatCurrency(fullProduct.preco)}</p>
-                
-                <div class="d-grid gap-2">
-                    <button class="btn btn-primary btn-lg add-to-cart-btn" data-id="${fullProduct.id}" data-nome="${fullProduct.nome}" aria-label="Adicionar ${fullProduct.nome} ao carrinho">
-                        <i class="fas fa-cart-plus"></i> Adicionar ao Carrinho
-                    </button>
-                </div>
+    `;
+    
+    if (showQuantityControl) {
+        // Bloco de controle de quantidade para o POST/PUT
+        html += `
+            <div class="mb-4">
+                <label for="quantityInput" class="form-label fw-bold">Selecione a Quantidade:</label>
+                <input type="number" class="form-control form-control-lg" id="quantityInput" value="1" min="1" aria-label="Quantidade a ser adicionada ao carrinho">
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-success btn-lg confirm-add-to-cart-btn" 
+                    data-id="${fullProduct.id}" 
+                    data-nome="${fullProduct.nome}"
+                    data-preco="${fullProduct.preco}"
+                    aria-label="Confirmar adição de ${fullProduct.nome} ao carrinho">
+                    <i class="fas fa-cart-plus"></i> Adicionar ao Carrinho
+                </button>
+            </div>
+        `;
+    } else {
+        // Bloco de detalhes (com botão para abrir a compra)
+        html += `
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary btn-lg add-to-cart-btn" data-id="${fullProduct.id}" aria-label="Comprar ${fullProduct.nome}">
+                    <i class="fas fa-shopping-cart"></i> Comprar Agora
+                </button>
+            </div>
+        `;
+    }
+    
+    html += `
             </div>
         </div>
     `;
+
     $body.html(html);
+    
+    // Altera o título do modal
+    $('#productDetailModalLabel').text(showQuantityControl ? `Comprar: ${fullProduct.nome}` : 'Detalhes do Produto');
 }
 
 /**
@@ -289,7 +299,7 @@ function showToast(message, bgClass = 'bg-success') {
 }
 
 // -------------------------------------------------------------
-// IV. Tratamento de Eventos (Event Listeners e Handlers)
+// III. Tratamento de Eventos (Event Listeners e Handlers)
 // -------------------------------------------------------------
 
 $(document).ready(function () {
@@ -304,13 +314,14 @@ $(document).ready(function () {
     // 2. Abre o Modal do Carrinho e Renderiza (GET /carrinho)
     $('#cartButton').on('click', renderCart);
 
-    // 3. Handler para ver detalhes do produto
+    // 3. Handler para ver detalhes do produto (Abre Modal de Detalhes)
     $('#productCatalog, #productDetailBody').on('click', '.view-details-btn', function () {
-        const productId = $(this).data('id');
+        const productId = $(this).data('id').toString(); // Garante string
         const product = CATALOG_DATA.find(p => p.id === productId);
 
         if (product) {
-            renderProductDetails(product);
+            // Renderiza SÓ os detalhes (showQuantityControl = false)
+            renderProductDetails(product, false); 
             const detailModal = new bootstrap.Modal(document.getElementById('productDetailModal'));
             detailModal.show();
         } else {
@@ -318,26 +329,54 @@ $(document).ready(function () {
         }
     });
 
-    // 4. Handler para Adicionar ao Carrinho (POST/PUT /carrinho)
-    $('#productCatalog, #productDetailBody').on('click', '.add-to-cart-btn', async function () {
-        const productId = $(this).data('id');
-        const productName = $(this).data('nome');
+    // 4.1: Handler para ABRIR o Modal de Confirmação de Compra 
+    $('#productCatalog, #productDetailBody').on('click', '.add-to-cart-btn', function (event) {
+        event.preventDefault(); 
+        
+        // CORREÇÃO: Garante que o ID lido é uma string para match com o CATALOG_DATA
+        const productId = $(this).data('id').toString(); 
         const product = CATALOG_DATA.find(p => p.id === productId);
-
+        
         if (product) {
-            // Prepara os dados conforme o schema do /carrinho
-            const cartItemData = {
-                produtoId: product.id,
-                nomeProduto: product.nome,
-                precoUnitario: product.preco,
-            };
-
-            // Chamada POST (que pode virar PUT, veja a função postCartItem)
-            await postCartItem(cartItemData);
+            // Renderiza o Modal com o controle de QUANTIDADE (showQuantityControl = true)
+            renderProductDetails(product, true); 
+            const detailModal = new bootstrap.Modal(document.getElementById('productDetailModal'));
+            detailModal.show();
+        } else {
+            showToast('Erro: Produto não encontrado para compra.', 'bg-danger');
         }
     });
 
-    // 5. Handler para Atualizar Quantidade (PUT /carrinho/:id)
+    // 4.2: Handler para CONFIRMAR a adição no Modal de Confirmação (POST/PUT)
+    $('#productDetailBody').on('click', '.confirm-add-to-cart-btn', async function () {
+        const $btn = $(this);
+        const productId = $btn.data('id');
+        const productName = $btn.data('nome');
+        const productPrice = $btn.data('preco');
+        
+        // Pega a quantidade do input
+        const quantity = parseInt($('#quantityInput').val(), 10);
+        
+        if (isNaN(quantity) || quantity <= 0) {
+            showToast('A quantidade deve ser um número inteiro positivo!', 'bg-danger');
+            return;
+        }
+
+        const cartItemData = {
+            produtoId: productId,
+            nomeProduto: productName,
+            precoUnitario: productPrice,
+        };
+        
+        // Chamada POST/PUT customizada com a quantidade selecionada
+        await postCartItemWithQuantity(cartItemData, quantity);
+        
+        // Fecha o modal após a adição bem-sucedida
+        const detailModal = bootstrap.Modal.getInstance(document.getElementById('productDetailModal'));
+        detailModal.hide();
+    });
+    
+    // 5. Handler para Atualizar Quantidade (PUT /carrinho/:id) - Botões +/-
     $('#cartItemsContainer').on('click', '.quantity-btn', async function () {
         const $btn = $(this);
         const cartItemId = $btn.data('id');
@@ -359,12 +398,11 @@ $(document).ready(function () {
         // Chamada PUT (Atualização)
         putCartItem(cartItemId, newQuantity, itemName)
             .catch(() => {
-                // Em caso de falha (ex: quantidade inválida), re-renderiza para corrigir o valor
-                renderCart();
+                renderCart(); // Reverte a UI em caso de falha
             });
     });
 
-    // 6. Handler para entrada manual de quantidade (Validação de Formulário e PUT)
+    // 6. Handler para entrada manual de quantidade (PUT /carrinho/:id)
     $('#cartItemsContainer').on('change', '.quantity-input', async function () {
         const $input = $(this);
         const cartItemId = $input.data('id');
@@ -374,7 +412,6 @@ $(document).ready(function () {
         // Chamada PUT (Atualização)
         putCartItem(cartItemId, newQuantity, itemName)
             .catch(() => {
-                // Se o PUT falhar, re-renderiza para corrigir o valor na UI
                 renderCart();
             });
     });
@@ -385,7 +422,6 @@ $(document).ready(function () {
         const itemName = $(this).data('name');
 
         if (window.confirm(`Tem certeza que deseja remover "${itemName}" do carrinho?`)) {
-            // Chamada DELETE
             await deleteCartItem(cartItemId, itemName);
         }
     });
