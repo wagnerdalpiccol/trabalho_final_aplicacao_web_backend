@@ -151,12 +151,6 @@ function renderProducts(products) {
         `;
         $catalog.append(html);
     });
-
-    const activeCategory = $('#categoryFilters button.btn-dark').data('category');
-    if (activeCategory) {
-        $('#categoryFilters button.filter-btn').removeClass('btn-dark').addClass('btn-outline-dark');
-        $(`#categoryFilters button[data-category="${activeCategory}"]`).removeClass('btn-outline-dark').addClass('btn-dark');
-    }
 }
 
 /**
@@ -187,11 +181,10 @@ function renderProductDetails(product, showQuantityControl = false) {
         html += `
             <div class="mb-4">
                 <label for="quantityInput" class="form-label fw-bold">Selecione a Quantidade:</label>
-                <input type="number" class="form-control form-control-lg" id="quantityInput" value="1" min="1" required aria-label="Quantidade a ser adicionada ao carrinho">
-                <span id="quantityError" class="text-danger small mt-1" style="display: none;"></span>
+                <input type="number" class="form-control form-control-lg" id="quantityInput" value="1" min="1" aria-label="Quantidade a ser adicionada ao carrinho">
             </div>
             <div class="d-grid gap-2">
-                <button class="btn btn-success btn-lg confirm-add-to-cart-btn"
+                <button class="btn btn-success btn-lg confirm-add-to-cart-btn" 
                     data-id="${fullProduct.id}" 
                     data-nome="${fullProduct.nome}"
                     data-preco="${fullProduct.preco}"
@@ -360,19 +353,14 @@ $(document).ready(function () {
         const productId = $btn.data('id');
         const productName = $btn.data('nome');
         const productPrice = $btn.data('preco');
-        const $quantityInput = $('#quantityInput');
-        const $errorSpan = $('#quantityError');
         
-        const quantity = parseInt($quantityInput.val(), 10);
+        // Pega a quantidade do input
+        const quantity = parseInt($('#quantityInput').val(), 10);
         
-        if (isNaN(quantity) || quantity < 1 || !Number.isInteger(quantity)) {
-            $errorSpan.text('Por favor, insira uma quantidade inteira válida (mínimo 1).').show();
-            $quantityInput.addClass('is-invalid');
+        if (isNaN(quantity) || quantity <= 0) {
+            showToast('A quantidade deve ser um número inteiro positivo!', 'bg-danger');
             return;
         }
-        
-        $errorSpan.hide();
-        $quantityInput.removeClass('is-invalid');
 
         const cartItemData = {
             produtoId: productId,
@@ -380,14 +368,12 @@ $(document).ready(function () {
             precoUnitario: productPrice,
         };
         
-        try {
-            await postCartItemWithQuantity(cartItemData, quantity);
-            const detailModal = bootstrap.Modal.getInstance(document.getElementById('productDetailModal'));
-            detailModal.hide();
-        } catch (error) {
-            console.error("Erro ao adicionar/atualizar carrinho:", error);
-            showToast('Falha ao processar sua compra. Tente novamente.', 'bg-danger');
-        }
+        // Chamada POST/PUT customizada com a quantidade selecionada
+        await postCartItemWithQuantity(cartItemData, quantity);
+        
+        // Fecha o modal após a adição bem-sucedida
+        const detailModal = bootstrap.Modal.getInstance(document.getElementById('productDetailModal'));
+        detailModal.hide();
     });
     
     // 5. Handler para Atualizar Quantidade (PUT /carrinho/:id) - Botões +/-
@@ -438,28 +424,5 @@ $(document).ready(function () {
         if (window.confirm(`Tem certeza que deseja remover "${itemName}" do carrinho?`)) {
             await deleteCartItem(cartItemId, itemName);
         }
-    });
-
-    $('#categoryFilters').on('click', '.filter-btn', function () {
-        const selectedCategory = $(this).data('category');
-
-        let filteredList = [];
-
-        if (selectedCategory === 'all') {
-            filteredList = CATALOG_DATA;
-        } else {
-            filteredList = CATALOG_DATA.filter(product => 
-                product.categoria && product.categoria.toLowerCase() === selectedCategory.toLowerCase()
-            );
-        }
-
-        renderProducts(filteredList);
-        
-        $('#categoryFilters button.filter-btn').removeClass('btn-dark btn-outline-dark').addClass('btn-outline-dark');
-        $(this).removeClass('btn-outline-dark').addClass('btn-dark');
-
-        $('html, body').animate({
-            scrollTop: $('#productCatalog').offset().top - 100 
-        }, 300);
     });
 });
